@@ -1,53 +1,43 @@
 name: Docker Image CI
 
 on:
-  # 仅在 main 分支有 push 事件时触发
   push:
     branches: [ "main" ]
-  # 允许手动触发
+  pull_request:
+    branches: [ "main" ]
   workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # 设置权限，允许 workflow 写入 GitHub Packages (GHCR)
     permissions:
       contents: read
       packages: write
 
     steps:
-    # 1. 检出代码
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    # 2. 登录到 GitHub Container Registry
-    # 使用 GITHUB_TOKEN 可以安全地进行认证，无需管理个人访问令牌 (PAT)
+    - uses: actions/checkout@v4
+    
     - name: Log in to the Container registry
       uses: docker/login-action@v3
       with:
-        registry: ghcr.io
-        # github.actor 是触发 workflow 的用户名
+        registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-
-    # 3. 提取元数据（镜像名、标签等）
-    # 这是一个最佳实践，可以自动生成符合规范的镜像名和标签
-    # 例如：ghcr.io/your-username/your-repo:latest, ghcr.io/your-username/your-repo:git-sha
+    
     - name: Extract metadata (tags, labels) for Docker
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository }}
-
-    # 4. 构建并推送 Docker 镜像
-    # 这个 action 会利用上一步生成的元数据，将构建和推送合并为一步，非常高效
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+    
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        # 使用上一步 'meta' 生成的标签
         tags: ${{ steps.meta.outputs.tags }}
-        # 使用上一步 'meta' 生成的标签作为镜像的 labels
         labels: ${{ steps.meta.outputs.labels }}
-
