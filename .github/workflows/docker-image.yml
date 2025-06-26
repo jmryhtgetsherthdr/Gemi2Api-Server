@@ -1,7 +1,5 @@
 name: Docker Image CI
 
-name: Docker Image CI and Push to GHCR
-
 on:
   # 仅在 main 分支有 push 事件时触发
   push:
